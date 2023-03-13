@@ -1,0 +1,25 @@
+From d67af588c2ea73493a68cdcebd69d1cc4bc7cc4d Mon Sep 17 00:00:00 2001
+From: kst
+Date: Sun, 16 Oct 2022 00:00:00 +0000
+Subject: [PATCH] use 32-bit draw index
+
+---
+ imconfig.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/imconfig.h b/imconfig.h
+index ed265082..bc342602 100644
+--- a/imconfig.h
++++ b/imconfig.h
+@@ -95,7 +95,7 @@
+ // Your renderer backend will need to support it (most example renderer backends support both 16/32-bit indices).
+ // Another way to allow large meshes while keeping 16-bit indices is to handle ImDrawCmd::VtxOffset in your renderer.
+ // Read about ImGuiBackendFlags_RendererHasVtxOffset for details.
+-//#define ImDrawIdx unsigned int
++#define ImDrawIdx unsigned int
+
+ //---- Override ImDrawCallback signature (will need to modify renderer backends accordingly)
+ //struct ImDrawList;
+--
+2.39.2
+
