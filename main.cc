@@ -42,14 +42,14 @@ static std::string lua_msg = "";
   (luaL_loadbuffer(L, buf, n, "bc") || lua_pcall(L, 0, LUA_MULTRET, 0))
 static std::atomic<bool> recompile = true;
 static bool lua_compile_ok = false;
-static std::string lua_src_run = lua_src_edit;
-static std::string lua_bc;
+static std::string lua_src = lua_src_edit;
+static std::vector<char> lua_bc;
 
 /* writer for bytecode compilation */
 static int
 bc_writer(lua_State *L, const void *b, size_t size, void *ud)
 {
-  lua_bc.append((const char *)b, size);
+  lua_bc.insert(lua_bc.end(), (const char *)b, (const char *)b+size);
   return 0;
 }
 
@@ -68,7 +68,7 @@ on_process(jack_nframes_t nframes, void *arg)
 
   /* 2. recompile if source updated */
   if (recompile) {
-    if (luaL_loadstring(L, lua_src_run.data()) == 0) {
+    if (luaL_loadstring(L, lua_src.c_str()) == 0) {
       /* clear error */
       lua_err.clear();
       /* dump compiled bytecode */
@@ -139,15 +139,15 @@ imgui_draw()
     plot_rb("out", plotbuf_out);
 
     if (ImGui::Button("recompile")) {
-      lua_src_run = lua_src_edit;
+      lua_src = lua_src_edit;
       recompile = true; /* not safe, but works for prototype. use ringbuf in production */
     }
     ImGui::InputTextMultiline("##lua_src", &lua_src_edit,
                               ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetTextLineHeight()*12),
                               ImGuiInputTextFlags_AllowTabInput);
     if (lua_err.size() > 0)
-      ImGui::TextWrapped("%s", lua_err.data());
-    ImGui::TextWrapped("%s", lua_msg.data());
+      ImGui::TextWrapped("%s", lua_err.c_str());
+    ImGui::TextWrapped("%s", lua_msg.c_str());
   ImGui::End();
 }
 
