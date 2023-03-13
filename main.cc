@@ -63,7 +63,10 @@ on_process(jack_nframes_t nframes, void *arg)
   in = (float *)jack_port_get_buffer(port_in, nframes);
   out = (float *)jack_port_get_buffer(port_out, nframes);
 
-  /* 1. recompile if source updated */
+  /* 1. for input plot */
+  plotbuf_in.push(in, nframes);
+
+  /* 2. recompile if source updated */
   if (recompile) {
     if (luaL_loadstring(L, lua_src_run.data()) == 0) {
       /* clear error */
@@ -82,40 +85,46 @@ on_process(jack_nframes_t nframes, void *arg)
     recompile = false;
   }
 
-  /* 2. for input plot */
-  plotbuf_in.push(in, nframes);
+  if (!lua_compile_ok)
+    goto err;
 
-  /* 3. run lua bytecode */
+  /* 3. update nframes */
+  lua_pushinteger(L, nframes);
+  lua_setglobal(L, "nframes");
+  /* 4. copy input buffer to x */
+  lua_getglobal(L, "x");
+  for (i = 0; i < nframes; i++) {
+    lua_pushnumber(L, in[i]);
+    lua_rawseti(L, -2, i+1);
+  }
+  lua_pop(L, 1);
+
+  /* 5. run lua */
   lua_msg.clear();
-  if (lua_compile_ok) {
-    /* 3.1 update nframes */
-    lua_pushinteger(L, nframes);
-    lua_setglobal(L, "nframes");
-    /* 3.2 copy input buffer to x */
-    lua_getglobal(L, "x");
-    for (i = 0; i < nframes; i++) {
-      lua_pushnumber(L, in[i]);
-      lua_rawseti(L, -2, i+1);
-    }
+  if (luaL_dobuf(L, lua_bc.data(), lua_bc.size()) != 0) {
+    /* show error */
+    lua_err = lua_tostring(L, -1);
     lua_pop(L, 1);
-    /* 3.3 run lua */
-    luaL_dobuf(L, lua_bc.data(), lua_bc.size());
-    /* 3.4 copy y to output buffer */
-    lua_getglobal(L, "y");
-    for (i = 0; i < nframes; i++) {
-      lua_rawgeti(L, -1, i+1);
-      out[i] = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-    }
-    lua_pop(L, 1);
-  } else {
-    /* set output to 0 */
-    memset(out, 0, nframes * sizeof(float));
+    goto err;
   }
 
-  /* 4. for output plot */
+  /* 6. copy y to output buffer */
+  lua_getglobal(L, "y");
+  for (i = 0; i < nframes; i++) {
+    lua_rawgeti(L, -1, i+1);
+    out[i] = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+  }
+  lua_pop(L, 1);
+
+  /* 7. for output plot */
   plotbuf_out.push(out, nframes);
 
+  return 0;
+err:
+  /* set output to 0 */
+  memset(out, 0, nframes * sizeof(float));
+  plotbuf_out.push(out, nframes);
   return 0;
 }
 
