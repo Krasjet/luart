@@ -185,8 +185,7 @@ lua_print_imgui(lua_State *L) {
     lua_call(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
-      return luaL_error(L, LUA_QL("tostring") " must return a string to "
-                           LUA_QL("print"));
+      return luaL_error(L, "'tostring' must return a string to 'print'");
     if (i>1) lua_msg.push_back('\t');
     lua_msg.append(s);
     lua_pop(L, 1);  /* pop result */
